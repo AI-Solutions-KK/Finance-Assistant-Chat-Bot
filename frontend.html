@@ -619,11 +619,14 @@
         const welcomeScreen = document.getElementById('welcomeScreen');
 
         // ============ SESSION ID FOR CONTEXT AWARENESS ============
-        let sessionId = localStorage.getItem("session_id");
+        // Session ID (clears on refresh / new tab)
+        let sessionId = sessionStorage.getItem("session_id");
+
         if (!sessionId) {
             sessionId = crypto.randomUUID();
-            localStorage.setItem("session_id", sessionId);
+            sessionStorage.setItem("session_id", sessionId);
         }
+
         console.log('📋 Session ID:', sessionId);
 
         // Dark mode

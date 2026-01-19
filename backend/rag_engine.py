@@ -1,5 +1,8 @@
 # Path: backend/rag_engine.py
 # Purpose: RAG engine with strict document grounding
+# Note:
+# - File names are NOT exposed to UI
+# - Sources are shown as a friendly label only
 
 from llama_index.core import (
     VectorStoreIndex,
@@ -38,7 +41,8 @@ class LoraRAGEngine:
         self.llm = Groq(
             model=GROQ_MODEL,
             api_key=GROQ_API_KEY,
-            temperature=TEMPERATURE
+            temperature=TEMPERATURE,
+            max_retries=1   # 🔒 prevent retry token explosion
         )
 
         self.embed_model = HuggingFaceEmbedding(
@@ -114,15 +118,12 @@ class LoraRAGEngine:
         try:
             response = self.query_engine.query(full_prompt)
 
-            sources = []
-            if hasattr(response, "source_nodes"):
-                for node in response.source_nodes:
-                    if hasattr(node, "metadata"):
-                        sources.append(node.metadata.get("file_name"))
+            # ✅ Hide technical file names from UI
+            sources = ["Lora Finance Company Policies and Documents"]
 
             return {
                 "response": str(response),
-                "sources": list(set(sources))
+                "sources": sources
             }
 
         except Exception as e:

@@ -1,3 +1,6 @@
+# Path: backend/config.py
+# Purpose: Central configuration
+
 import os
 from pathlib import Path
 from dotenv import load_dotenv
@@ -13,29 +16,41 @@ STORAGE_DIR.mkdir(exist_ok=True)
 
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 if not GROQ_API_KEY:
-    raise ValueError("GROQ_API_KEY not found in .env file")
+    raise ValueError("GROQ_API_KEY not found")
 
-GROQ_MODEL = "llama-3.3-70b-versatile"
-TEMPERATURE = 0.7
+GROQ_MODEL = "llama-3.1-8b-instant"
+TEMPERATURE = 0.0
+MAX_TOKENS = 512
+
 EMBEDDING_MODEL = "BAAI/bge-small-en-v1.5"
 CHUNK_SIZE = 512
 CHUNK_OVERLAP = 50
 
-# NEW: Context Awareness Settings
-MEMORY_TOKEN_LIMIT = 4000  # Size of the context window
-MAX_TOKENS = 1024
-SYSTEM_PROMPT = """You are Lora, an AI finance assistant for Lora Finance company. 
+MAX_CHAT_HISTORY = 4
+SESSION_TTL_MINUTES = 10
 
-CRITICAL INSTRUCTIONS:
-1. Answer ONLY using information from the provided document context and chat history.
-2. If information is not in the documents, say: "I don't have that specific information in our documents. Please contact our customer care at 1800-123-5678"
-3. NEVER make up or hallucinate information
-4. Be friendly, professional, and concise
-5. Always cite sources when available
+SYSTEM_PROMPT = """
+You are Lora, a friendly and professional AI finance assistant for Lora Finance.
 
-About Lora Finance:
-We provide gold loans, personal loans, business loans, home loans, vehicle loans, and education loans with competitive rates."""
+TONE & STYLE RULES (VERY IMPORTANT):
+- Sound natural and human, not robotic.
+- Be short, but conversational.
+- Answers should read well even in the middle of a conversation.
+- Do NOT reply with bare facts only (avoid "X is Y." style).
+- Use simple full sentences.
 
-WATCH_INTERVAL = 2
+ANSWERING RULES:
+- Answer strictly from the provided documents.
+- Answer ONLY what the user asked.
+- Do NOT explain extra details unless the user asks.
+- One loan type per answer.
+- If the loan type is unclear, ask ONE short clarification question.
+- If information is missing, say:
+  "This information is not available in our documents."
+
+Loans offered:
+Gold Loan, Personal Loan, Business Loan, Home Loan, Education Loan.
+"""
+
 HOST = "0.0.0.0"
 PORT = 8000

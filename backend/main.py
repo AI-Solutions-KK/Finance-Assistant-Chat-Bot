@@ -1,27 +1,20 @@
 # Path: backend/main.py
-# Purpose: FastAPI server with intent-aware context, short answers,
-#          and auto session cleanup (NO UI changes)
+# Purpose:
+# - Excel knowledge box first
+# - RAG fallback
+# - Stateless (NO session memory)
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
-from rag_engine import get_rag_engine
-from session_store import (
-    init_db,
-    create_session_if_not_exists,
-    save_message,
-    get_recent_messages,
-    delete_expired_sessions,
-    get_last_loan_type,
-    set_last_loan_type
-)
-from prompt_builder import build_prompt
-from config import SYSTEM_PROMPT, HOST, PORT, MAX_CHAT_HISTORY, SESSION_TTL_MINUTES
+# Fixed: Use relative imports for package resolution
+from .knowledge_loader import get_knowledge_box
+from .answer_verifier import verify_answer
+from .rag_engine import get_rag_engine
+from .prompt_builder import build_prompt
+from .config import SYSTEM_PROMPT, HOST, PORT
 
-# -------------------------------------------------
-# App setup
-# -------------------------------------------------
 app = FastAPI()
 
 app.add_middleware(
@@ -31,129 +24,53 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-init_db()
+kb = get_knowledge_box()
 rag_engine = get_rag_engine()
 
 
-# -------------------------------------------------
-# Request model
-# -------------------------------------------------
 class ChatRequest(BaseModel):
     message: str
-    session_id: str
 
 
-# -------------------------------------------------
-# Intent helpers
-# -------------------------------------------------
-LOAN_KEYWORDS = {
-    "gold loan": "gold loan",
-    "personal loan": "personal loan",
-    "business loan": "business loan",
-    "home loan": "home loan",
-    "education loan": "education loan"
-}
-
-SHORT_FOLLOWUPS = {
-    "documents", "documents?",
-    "eligibility", "eligibility?",
-    "repayment", "repayment?",
-    "interest", "interest?",
-    "interest rate", "rate", "rate?"
-}
-
-
-def detect_loan_type(text: str):
-    text = text.lower()
-    for key, value in LOAN_KEYWORDS.items():
-        if key in text:
-            return value
-    return None
-
-
-# -------------------------------------------------
-# Health check
-# -------------------------------------------------
 @app.get("/health")
 def health():
     return {"status": "ok"}
 
 
-# -------------------------------------------------
-# Chat endpoint
-# -------------------------------------------------
 @app.post("/chat")
 def chat(req: ChatRequest):
-    # 🔄 Auto cleanup expired sessions
-    delete_expired_sessions(
-        older_than_minutes=SESSION_TTL_MINUTES
-    )
+    user_question = req.message.strip()
 
-    session_id = req.session_id
-    user_message = req.message.strip()
+    # 1️⃣ Knowledge Box (Excel)
+    kb_match = kb.search(user_question)
 
-    create_session_if_not_exists(session_id)
-    save_message(session_id, "user", user_message)
-
-    # ---------------------------------------------
-    # Intent tracking (CORE FIX)
-    # ---------------------------------------------
-    explicit_loan = detect_loan_type(user_message)
-
-    if explicit_loan:
-        # User explicitly mentioned a loan → lock intent
-        set_last_loan_type(session_id, explicit_loan)
-        active_loan = explicit_loan
-    else:
-        # Use previous intent if available
-        active_loan = get_last_loan_type(session_id)
-
-    # ---------------------------------------------
-    # Handle short follow-up questions correctly
-    # ---------------------------------------------
-    normalized = user_message.lower().strip()
-
-    if normalized in SHORT_FOLLOWUPS:
-        if active_loan:
-            # Rewrite internally to preserve context
-            user_message = f"{normalized} for {active_loan}"
-        else:
-            # No context → ask clarification
+    if kb_match:
+        verified = verify_answer(
+            user_question,
+            kb_match["answer"]
+        )
+        # Fixed: Only return if verification succeeded; else fallback to RAG
+        if verified:
             return {
-                "response": "Which loan are you referring to?",
-                "sources": []
+                "response": verified,
+                "sources": ["Lora Finance Company Policies and Documents"]
             }
 
-    # ---------------------------------------------
-    # Build prompt with limited history
-    # ---------------------------------------------
-    history = get_recent_messages(
-        session_id,
-        limit=MAX_CHAT_HISTORY
-    )
-
-    full_prompt = build_prompt(
+    # 2️⃣ RAG fallback (Runs if KB search fails OR verification returns None)
+    prompt = build_prompt(
         SYSTEM_PROMPT,
-        history,
-        user_message
+        [],
+        user_question
     )
 
-    # ---------------------------------------------
-    # RAG query
-    # ---------------------------------------------
-    result = rag_engine.query(full_prompt)
-
-    save_message(session_id, "assistant", result["response"])
+    result = rag_engine.query(prompt)
 
     return {
         "response": result["response"],
-        "sources": result.get("sources", [])
+        "sources": ["Lora Finance Company Policies and Documents"]
     }
 
 
-# -------------------------------------------------
-# Run server
-# -------------------------------------------------
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host=HOST, port=PORT)

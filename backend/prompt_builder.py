@@ -1,15 +1,12 @@
 # Path: backend/prompt_builder.py
-# Purpose: Human-like, concise, context-aware prompt builder
+# Purpose:
+# - Build prompt using FULL current-session chat for understanding
+# - Chat history is CONTEXT ONLY (never knowledge)
+# - Human, short, policy-aligned answers
 
-from typing import List, Tuple
-
-def build_prompt(
-    system_prompt: str,
-    chat_history: List[Tuple[str, str]],
-    user_question: str
-) -> str:
-
+def build_prompt(system_prompt: str, chat_history: list, user_question: str) -> str:
     history_text = ""
+
     for role, content in chat_history:
         prefix = "User" if role == "user" else "Assistant"
         history_text += f"{prefix}: {content}\n"
@@ -17,22 +14,15 @@ def build_prompt(
     return f"""
 {system_prompt}
 
-Conversation history (use ONLY to understand context, not as facts):
+IMPORTANT:
+- Conversation history is provided ONLY to understand intent and follow-ups.
+- Do NOT treat previous answers as facts or sources.
+- Answer strictly from the provided documents.
+- Do NOT repeat old answers unless relevant to the current question.
+
+Conversation history (context only):
 {history_text}
 
-RESPONSE GUIDELINES:
-- Keep answers short (1–4 lines).
-- Be natural and human-like.
-- Do NOT sound like a fixed template.
-- Do NOT list raw values unless appropriate.
-- Phrase answers so they feel conversational.
-- Example:
-  ❌ "Gold loan interest rate is 9%."
-  ✅ "The interest rate for a gold loan starts from 9% per annum."
-
-- If the user asks a vague question, ask ONE clarification.
-- Otherwise, answer directly.
-
-User Question:
+User question:
 {user_question}
 """

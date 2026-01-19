@@ -1,35 +1,32 @@
 # Path: backend/session_store.py
 # Purpose:
-# - Session memory
-# - Loan intent tracking
-# - Auto-expiry
-# - SQLite schema migration safe
+# - Store FULL current-session chat only
+# - Used ONLY for LLM context understanding
+# - NEVER used as knowledge
+# - Auto-cleared on TTL / refresh / close
 
 import sqlite3
 from datetime import datetime, timedelta
 from pathlib import Path
 
-DB_PATH = Path(__file__).resolve().parent.parent / "storage" / "chat_sessions.db"
+from config import STORAGE_DIR, SESSION_TTL_MINUTES
 
-
-def _column_exists(cur, table, column):
-    cur.execute(f"PRAGMA table_info({table})")
-    return column in [row[1] for row in cur.fetchall()]
+DB_PATH = STORAGE_DIR / "chat_sessions.db"
 
 
 # -------------------------------------------------
-# DB init + migration
+# DB init
 # -------------------------------------------------
 def init_db():
-    DB_PATH.parent.mkdir(exist_ok=True)
+    STORAGE_DIR.mkdir(exist_ok=True)
+
     conn = sqlite3.connect(DB_PATH)
     cur = conn.cursor()
 
-    # Create base tables
     cur.execute("""
         CREATE TABLE IF NOT EXISTS sessions (
             session_id TEXT PRIMARY KEY,
-            created_at TEXT
+            last_active TEXT
         )
     """)
 
@@ -43,13 +40,6 @@ def init_db():
         )
     """)
 
-    # 🔄 MIGRATIONS
-    if not _column_exists(cur, "sessions", "last_active"):
-        cur.execute("ALTER TABLE sessions ADD COLUMN last_active TEXT")
-
-    if not _column_exists(cur, "sessions", "last_loan_type"):
-        cur.execute("ALTER TABLE sessions ADD COLUMN last_loan_type TEXT")
-
     conn.commit()
     conn.close()
 
@@ -60,23 +50,24 @@ def init_db():
 def create_session_if_not_exists(session_id: str):
     conn = sqlite3.connect(DB_PATH)
     cur = conn.cursor()
+
     now = datetime.utcnow().isoformat()
 
     cur.execute("""
-        INSERT OR IGNORE INTO sessions (session_id, created_at, last_active)
-        VALUES (?, ?, ?)
-    """, (session_id, now, now))
+        INSERT OR IGNORE INTO sessions (session_id, last_active)
+        VALUES (?, ?)
+    """, (session_id, now))
 
     cur.execute("""
-        UPDATE sessions SET last_active=?
-        WHERE session_id=?
+        UPDATE sessions SET last_active = ?
+        WHERE session_id = ?
     """, (now, session_id))
 
     conn.commit()
     conn.close()
 
 
-def delete_expired_sessions(older_than_minutes: int):
+def delete_expired_sessions(older_than_minutes: int = SESSION_TTL_MINUTES):
     conn = sqlite3.connect(DB_PATH)
     cur = conn.cursor()
 
@@ -91,7 +82,8 @@ def delete_expired_sessions(older_than_minutes: int):
     """, (cutoff,))
 
     cur.execute("""
-        DELETE FROM sessions WHERE last_active < ?
+        DELETE FROM sessions
+        WHERE last_active < ?
     """, (cutoff,))
 
     conn.commit()
@@ -99,11 +91,12 @@ def delete_expired_sessions(older_than_minutes: int):
 
 
 # -------------------------------------------------
-# Messages
+# Message storage (TEMP ONLY)
 # -------------------------------------------------
 def save_message(session_id: str, role: str, content: str):
     conn = sqlite3.connect(DB_PATH)
     cur = conn.cursor()
+
     now = datetime.utcnow().isoformat()
 
     cur.execute("""
@@ -112,8 +105,8 @@ def save_message(session_id: str, role: str, content: str):
     """, (session_id, role, content, now))
 
     cur.execute("""
-        UPDATE sessions SET last_active=?
-        WHERE session_id=?
+        UPDATE sessions SET last_active = ?
+        WHERE session_id = ?
     """, (now, session_id))
 
     conn.commit()
@@ -125,42 +118,13 @@ def get_recent_messages(session_id: str, limit: int):
     cur = conn.cursor()
 
     cur.execute("""
-        SELECT role, content FROM messages
-        WHERE session_id=?
-        ORDER BY id DESC
+        SELECT role, content
+        FROM messages
+        WHERE session_id = ?
+        ORDER BY id ASC
         LIMIT ?
     """, (session_id, limit))
 
     rows = cur.fetchall()
     conn.close()
-    return list(reversed(rows))
-
-
-# -------------------------------------------------
-# Loan intent
-# -------------------------------------------------
-def set_last_loan_type(session_id: str, loan_type: str):
-    conn = sqlite3.connect(DB_PATH)
-    cur = conn.cursor()
-
-    cur.execute("""
-        UPDATE sessions SET last_loan_type=?
-        WHERE session_id=?
-    """, (loan_type, session_id))
-
-    conn.commit()
-    conn.close()
-
-
-def get_last_loan_type(session_id: str):
-    conn = sqlite3.connect(DB_PATH)
-    cur = conn.cursor()
-
-    cur.execute("""
-        SELECT last_loan_type FROM sessions
-        WHERE session_id=?
-    """, (session_id,))
-
-    row = cur.fetchone()
-    conn.close()
-    return row[0] if row and row[0] else None
+    return rows

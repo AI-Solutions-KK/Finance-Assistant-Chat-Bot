@@ -1,0 +1,8 @@
+# 1. Uninstall the existing (potentially broken) versions
+pip uninstall torch torchvision torchaudio -y
+
+# 2. Clear the pip cache to ensure a fresh download
+pip cache purge
+
+# 3. Reinstall a stable version for CPU (most common for chatbots)
+pip install torch==2.2.2 torchvision==0.17.2 torchaudio==2.2.2 --index-url https://download.pytorch.org/whl/cpu

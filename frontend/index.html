@@ -1,0 +1,786 @@
+<!-- File: frontend.html -->
+<!-- Lora AI Finance Assistant - Full UI with Context Awareness -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lora - AI Finance Assistant</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #667eea;
+            --primary-dark: #5568d3;
+            --bg-light: #ffffff;
+            --bg-dark: #1a1a1a;
+            --text-light: #2d3748;
+            --text-dark: #e2e8f0;
+            --sidebar-light: #f7fafc;
+            --sidebar-dark: #2d2d2d;
+            --message-user: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --message-bot: #f7fafc;
+            --message-bot-dark: #2d2d2d;
+            --border-light: #e2e8f0;
+            --border-dark: #3d3d3d;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            height: 100vh;
+            overflow: hidden;
+            background: var(--bg-light);
+            color: var(--text-light);
+            transition: background 0.3s, color 0.3s;
+        }
+
+        body.dark-mode {
+            background: var(--bg-dark);
+            color: var(--text-dark);
+        }
+
+        .container {
+            display: flex;
+            height: 100vh;
+        }
+
+        .sidebar {
+            width: 280px;
+            background: var(--sidebar-light);
+            border-right: 1px solid var(--border-light);
+            display: flex;
+            flex-direction: column;
+            transition: background 0.3s, border-color 0.3s;
+        }
+
+        body.dark-mode .sidebar {
+            background: var(--sidebar-dark);
+            border-color: var(--border-dark);
+        }
+
+        .sidebar-header {
+            padding: 1.5rem;
+            border-bottom: 1px solid var(--border-light);
+        }
+
+        body.dark-mode .sidebar-header {
+            border-color: var(--border-dark);
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: var(--primary);
+        }
+
+        .logo-icon {
+            font-size: 2rem;
+        }
+
+        .sidebar-content {
+            flex: 1;
+            padding: 1.5rem;
+            overflow-y: auto;
+        }
+
+        .section {
+            margin-bottom: 2rem;
+        }
+
+        .section-title {
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: #718096;
+            margin-bottom: 0.75rem;
+        }
+
+        .suggestion-btn {
+            width: 100%;
+            text-align: left;
+            padding: 0.75rem;
+            margin-bottom: 0.5rem;
+            background: var(--bg-light);
+            border: 1px solid var(--border-light);
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            color: var(--text-light);
+            transition: all 0.2s;
+        }
+
+        body.dark-mode .suggestion-btn {
+            background: var(--bg-dark);
+            border-color: var(--border-dark);
+            color: var(--text-dark);
+        }
+
+        .suggestion-btn:hover {
+            background: var(--primary);
+            color: white;
+            border-color: var(--primary);
+            transform: translateX(4px);
+        }
+
+        .service-tag {
+            display: inline-block;
+            padding: 0.4rem 0.8rem;
+            margin: 0.25rem;
+            background: var(--primary);
+            color: white;
+            border-radius: 16px;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        .service-tag:hover {
+            transform: scale(1.05);
+        }
+
+        .chat-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .chat-header {
+            padding: 1rem 2rem;
+            background: var(--bg-light);
+            border-bottom: 1px solid var(--border-light);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        body.dark-mode .chat-header {
+            background: var(--bg-dark);
+            border-color: var(--border-dark);
+        }
+
+        .chat-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+        }
+
+        .icon-btn {
+            background: none;
+            border: none;
+            font-size: 1.3rem;
+            cursor: pointer;
+            padding: 0.5rem;
+            border-radius: 8px;
+            transition: background 0.2s;
+        }
+
+        .icon-btn:hover {
+            background: var(--sidebar-light);
+        }
+
+        body.dark-mode .icon-btn:hover {
+            background: var(--sidebar-dark);
+        }
+
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 2rem;
+            background: var(--bg-light);
+        }
+
+        body.dark-mode .chat-messages {
+            background: var(--bg-dark);
+        }
+
+        .message {
+            max-width: 800px;
+            margin: 0 auto 1.5rem auto;
+            display: flex;
+            gap: 1rem;
+        }
+
+        .message.user {
+            flex-direction: row-reverse;
+        }
+
+        .message-avatar {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            flex-shrink: 0;
+        }
+
+        .message.bot .message-avatar {
+            background: var(--primary);
+            color: white;
+        }
+
+        .message.user .message-avatar {
+            background: var(--message-user);
+            color: white;
+        }
+
+        .message-content {
+            flex: 1;
+            padding: 1rem 1.25rem;
+            border-radius: 12px;
+            line-height: 1.6;
+        }
+
+        .message.bot .message-content {
+            background: var(--message-bot);
+            border: 1px solid var(--border-light);
+        }
+
+        body.dark-mode .message.bot .message-content {
+            background: var(--message-bot-dark);
+            border-color: var(--border-dark);
+        }
+
+        .message.user .message-content {
+            background: var(--message-user);
+            color: white;
+        }
+
+        .message-sources {
+            margin-top: 0.75rem;
+            padding-top: 0.75rem;
+            border-top: 1px solid var(--border-light);
+            font-size: 0.85rem;
+            color: #718096;
+        }
+
+        body.dark-mode .message-sources {
+            border-color: var(--border-dark);
+        }
+
+        .typing-indicator {
+            display: none;
+            max-width: 800px;
+            margin: 0 auto 1.5rem auto;
+        }
+
+        .typing-indicator.active {
+            display: flex;
+        }
+
+        .typing-dots {
+            display: flex;
+            gap: 6px;
+            padding: 1rem 1.25rem;
+            background: var(--message-bot);
+            border-radius: 12px;
+            border: 1px solid var(--border-light);
+            margin-left: 52px;
+        }
+
+        body.dark-mode .typing-dots {
+            background: var(--message-bot-dark);
+            border-color: var(--border-dark);
+        }
+
+        .typing-dots span {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--primary);
+            animation: typing 1.4s infinite;
+        }
+
+        .typing-dots span:nth-child(2) {
+            animation-delay: 0.2s;
+        }
+
+        .typing-dots span:nth-child(3) {
+            animation-delay: 0.4s;
+        }
+
+        @keyframes typing {
+            0%, 60%, 100% { transform: translateY(0); opacity: 0.5; }
+            30% { transform: translateY(-10px); opacity: 1; }
+        }
+
+        .welcome-screen {
+            max-width: 700px;
+            margin: 4rem auto;
+            text-align: center;
+        }
+
+        .welcome-icon {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+        }
+
+        .welcome-title {
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+
+        .welcome-subtitle {
+            font-size: 1.1rem;
+            color: #718096;
+            margin-bottom: 2rem;
+        }
+
+        .example-questions {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-top: 2rem;
+        }
+
+        .example-card {
+            padding: 1rem;
+            background: var(--sidebar-light);
+            border: 1px solid var(--border-light);
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-align: left;
+        }
+
+        body.dark-mode .example-card {
+            background: var(--sidebar-dark);
+            border-color: var(--border-dark);
+        }
+
+        .example-card:hover {
+            border-color: var(--primary);
+            transform: translateY(-2px);
+        }
+
+        .example-icon {
+            font-size: 1.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .example-text {
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+
+        .input-area {
+            padding: 1.5rem 2rem;
+            background: var(--bg-light);
+            border-top: 1px solid var(--border-light);
+        }
+
+        body.dark-mode .input-area {
+            background: var(--bg-dark);
+            border-color: var(--border-dark);
+        }
+
+        .input-container {
+            max-width: 800px;
+            margin: 0 auto;
+            display: flex;
+            gap: 1rem;
+        }
+
+        .chat-input {
+            flex: 1;
+            padding: 1rem 1.25rem;
+            border: 2px solid var(--border-light);
+            border-radius: 24px;
+            font-size: 1rem;
+            outline: none;
+            background: var(--bg-light);
+            color: var(--text-light);
+            transition: border-color 0.2s;
+        }
+
+        body.dark-mode .chat-input {
+            background: var(--bg-dark);
+            color: var(--text-dark);
+            border-color: var(--border-dark);
+        }
+
+        .chat-input:focus {
+            border-color: var(--primary);
+        }
+
+        .send-btn {
+            padding: 1rem 2rem;
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 24px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s, transform 0.2s;
+        }
+
+        .send-btn:hover:not(:disabled) {
+            background: var(--primary-dark);
+            transform: scale(1.05);
+        }
+
+        .send-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--sidebar-light);
+        }
+
+        body.dark-mode ::-webkit-scrollbar-track {
+            background: var(--sidebar-dark);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e0;
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #a0aec0;
+        }
+
+        @media (max-width: 768px) {
+            .sidebar {
+                position: fixed;
+                left: -280px;
+                z-index: 100;
+                height: 100vh;
+                transition: left 0.3s;
+            }
+
+            .sidebar.open {
+                left: 0;
+            }
+
+            .welcome-screen {
+                margin: 2rem auto;
+            }
+
+            .example-questions {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="logo">
+                    <span class="logo-icon">💰</span>
+                    <span>Lora Finance</span>
+                </div>
+            </div>
+
+            <div class="sidebar-content">
+                <!-- Popular Questions -->
+                <div class="section">
+                    <div class="section-title">💡 Popular Questions</div>
+                    <button class="suggestion-btn" onclick="askQuestion('What are your gold loan interest rates?')">
+                        What are your gold loan interest rates?
+                    </button>
+                    <button class="suggestion-btn" onclick="askQuestion('What documents do I need for a personal loan?')">
+                        What documents do I need for a personal loan?
+                    </button>
+                    <button class="suggestion-btn" onclick="askQuestion('What are the current offers?')">
+                        What are the current offers?
+                    </button>
+                    <button class="suggestion-btn" onclick="askQuestion('How quickly can I get a gold loan?')">
+                        How quickly can I get a gold loan?
+                    </button>
+                </div>
+
+                <!-- Services -->
+                <div class="section">
+                    <div class="section-title">🏦 Our Services</div>
+                    <div>
+                        <span class="service-tag" onclick="askQuestion('Tell me about gold loans')">Gold Loans</span>
+                        <span class="service-tag" onclick="askQuestion('Tell me about personal loans')">Personal Loans</span>
+                        <span class="service-tag" onclick="askQuestion('Tell me about business loans')">Business Loans</span>
+                        <span class="service-tag" onclick="askQuestion('Tell me about home loans')">Home Loans</span>
+                        <span class="service-tag" onclick="askQuestion('Tell me about education loans')">Education Loans</span>
+                    </div>
+                </div>
+
+                <!-- More Questions -->
+                <div class="section">
+                    <div class="section-title">❓ You Can Ask</div>
+                    <button class="suggestion-btn" onclick="askQuestion('What is the eligibility for personal loans?')">
+                        Eligibility criteria?
+                    </button>
+                    <button class="suggestion-btn" onclick="askQuestion('How do I contact customer care?')">
+                        Contact information?
+                    </button>
+                    <button class="suggestion-btn" onclick="askQuestion('What are the repayment options?')">
+                        Repayment options?
+                    </button>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Chat Area -->
+        <div class="chat-container">
+            <header class="chat-header">
+                <div class="chat-title">Chat with Lora</div>
+                <div class="header-actions">
+                    <button class="icon-btn" onclick="toggleDarkMode()" title="Toggle dark mode">
+                        <span id="themeIcon">🌙</span>
+                    </button>
+                    <button class="icon-btn" onclick="clearChat()" title="New chat">
+                        🗑️
+                    </button>
+                </div>
+            </header>
+
+            <div class="chat-messages" id="chatMessages">
+                <!-- Welcome Screen -->
+                <div class="welcome-screen" id="welcomeScreen">
+                <div class="welcome-icon">
+                <img src="assets/lora.jpg" alt="Lora AI" />
+                </div>
+                    <h1 class="welcome-title">Hi! I'm Lora</h1>
+                    <p class="welcome-subtitle">Your AI Finance Assistant for Lora Finance</p>
+                    <p style="color: #718096; margin-bottom: 2rem;">
+                        Ask me anything about our loans, services, interest rates, eligibility, or current offers!
+                    </p>
+
+                    <div class="example-questions">
+                        <div class="example-card" onclick="askQuestion('What are your gold loan interest rates?')">
+                            <div class="example-icon">💰</div>
+                            <div class="example-text">Gold loan interest rates?</div>
+                        </div>
+                        <div class="example-card" onclick="askQuestion('What documents are needed for personal loan?')">
+                            <div class="example-icon">📄</div>
+                            <div class="example-text">Documents required?</div>
+                        </div>
+                        <div class="example-card" onclick="askQuestion('Tell me about current offers')">
+                            <div class="example-icon">🎁</div>
+                            <div class="example-text">Current offers?</div>
+                        </div>
+                        <div class="example-card" onclick="askQuestion('How to contact customer care?')">
+                            <div class="example-icon">📞</div>
+                            <div class="example-text">Contact support?</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="typing-indicator" id="typingIndicator">
+                <div class="typing-dots">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </div>
+            </div>
+
+            <div class="input-area">
+                <form class="input-container" id="chatForm">
+                    <input 
+                        type="text" 
+                        class="chat-input" 
+                        id="chatInput" 
+                        placeholder="Ask about loans, rates, eligibility, offers..."
+                        autocomplete="off"
+                    />
+                    <button type="submit" class="send-btn" id="sendBtn">Send</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = 'http://localhost:8000';
+        const chatMessages = document.getElementById('chatMessages');
+        const chatInput = document.getElementById('chatInput');
+        const chatForm = document.getElementById('chatForm');
+        const sendBtn = document.getElementById('sendBtn');
+        const typingIndicator = document.getElementById('typingIndicator');
+        const welcomeScreen = document.getElementById('welcomeScreen');
+
+        // ============ SESSION ID FOR CONTEXT AWARENESS ============
+        // Session ID (clears on refresh / new tab)
+        let sessionId = sessionStorage.getItem("session_id");
+
+        if (!sessionId) {
+            sessionId = crypto.randomUUID();
+            sessionStorage.setItem("session_id", sessionId);
+        }
+
+        console.log('📋 Session ID:', sessionId);
+
+        // Dark mode
+        function toggleDarkMode() {
+            document.body.classList.toggle('dark-mode');
+            const icon = document.getElementById('themeIcon');
+            icon.textContent = document.body.classList.contains('dark-mode') ? '☀️' : '🌙';
+            localStorage.setItem('darkMode', document.body.classList.contains('dark-mode'));
+        }
+
+        // Load dark mode preference
+        if (localStorage.getItem('darkMode') === 'true') {
+            toggleDarkMode();
+        }
+
+        // Clear chat
+        function clearChat() {
+            chatMessages.innerHTML = '';
+            welcomeScreen.style.display = 'block';
+            chatMessages.appendChild(welcomeScreen);
+            // Generate new session for new chat
+            sessionId = crypto.randomUUID();
+            localStorage.setItem("session_id", sessionId);
+            console.log('🔄 New session started:', sessionId);
+        }
+
+        // Add message to chat
+        function addMessage(content, isUser = false, sources = []) {
+            // Hide welcome screen on first message
+            if (welcomeScreen.style.display !== 'none') {
+                welcomeScreen.style.display = 'none';
+            }
+
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${isUser ? 'user' : 'bot'}`;
+            
+            const avatar = document.createElement('div');
+            avatar.className = 'message-avatar';
+            avatar.textContent = isUser ? '👤' : '🤖';
+            
+            const contentDiv = document.createElement('div');
+            contentDiv.className = 'message-content';
+            
+            // Format content
+            const formattedContent = content.replace(/\n/g, '<br>');
+            contentDiv.innerHTML = formattedContent;
+            
+            // Add sources if available
+            if (!isUser && sources.length > 0) {
+                const sourcesDiv = document.createElement('div');
+                sourcesDiv.className = 'message-sources';
+                sourcesDiv.innerHTML = `📚 <strong>Sources:</strong> ${sources.join(', ')}`;
+                contentDiv.appendChild(sourcesDiv);
+            }
+            
+            messageDiv.appendChild(avatar);
+            messageDiv.appendChild(contentDiv);
+            chatMessages.appendChild(messageDiv);
+            
+            // Scroll to bottom
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        // Show/hide typing indicator
+        function setTyping(isTyping) {
+            if (isTyping) {
+                typingIndicator.classList.add('active');
+            } else {
+                typingIndicator.classList.remove('active');
+            }
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        // Send message to API with session_id
+        async function sendMessage(message) {
+            try {
+                const response = await fetch(`${API_URL}/chat`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ 
+                        message: message,
+                        session_id: sessionId  // ✅ CONTEXT ENABLED
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const data = await response.json();
+                return data;
+            } catch (error) {
+                console.error('Error:', error);
+                return {
+                    response: "I'm having trouble connecting to the server. Please ensure the backend is running on http://localhost:8000",
+                    sources: []
+                };
+            }
+        }
+
+        // Handle form submit
+        chatForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const message = chatInput.value.trim();
+            if (!message) return;
+            
+            // Add user message
+            addMessage(message, true);
+            chatInput.value = '';
+            
+            // Disable input while processing
+            chatInput.disabled = true;
+            sendBtn.disabled = true;
+            setTyping(true);
+            
+            // Send to API
+            const response = await sendMessage(message);
+            
+            // Hide typing indicator
+            setTyping(false);
+            
+            // Add bot response
+            addMessage(response.response, false, response.sources || []);
+            
+            // Re-enable input
+            chatInput.disabled = false;
+            sendBtn.disabled = false;
+            chatInput.focus();
+        });
+
+        // Helper function to ask question from buttons
+        function askQuestion(question) {
+            chatInput.value = question;
+            chatForm.dispatchEvent(new Event('submit'));
+        }
+
+        // Test API on page load
+        window.addEventListener('load', async () => {
+            try {
+                const response = await fetch(`${API_URL}/health`);
+                if (response.ok) {
+                    console.log('✅ Backend connected successfully');
+                } else {
+                    console.warn('⚠️ Backend returned error');
+                }
+            } catch (error) {
+                console.error('❌ Backend not reachable. Make sure to run: python backend/main.py');
+            }
+        });
+    </script>
+</body>
+</html>

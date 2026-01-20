@@ -574,7 +574,7 @@
                         </div>
                         <div class="example-card" onclick="askQuestion('What documents are needed for personal loan?')">
                             <div class="example-icon">📄</div>
-                            <div class="example-text">Documents required?</div>
+                            <div class="example-text">Documents required for personal loan?</div>
                         </div>
                         <div class="example-card" onclick="askQuestion('Tell me about current offers')">
                             <div class="example-icon">🎁</div>
@@ -620,16 +620,39 @@
         const typingIndicator = document.getElementById('typingIndicator');
         const welcomeScreen = document.getElementById('welcomeScreen');
 
-        // ============ SESSION ID FOR CONTEXT AWARENESS ============
-        // Session ID (clears on refresh / new tab)
-        let sessionId = sessionStorage.getItem("session_id");
-
-        if (!sessionId) {
-            sessionId = crypto.randomUUID();
-            sessionStorage.setItem("session_id", sessionId);
+        // ============ PROPER SESSION MANAGEMENT ============
+        // Generate unique session ID per browser tab using sessionStorage
+        function getSessionId() {
+            let sessionId = sessionStorage.getItem('chat_session_id');
+            
+            if (!sessionId) {
+                // Generate new unique ID for this tab
+                sessionId = 'session_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+                sessionStorage.setItem('chat_session_id', sessionId);
+                console.log('🆕 New session created:', sessionId);
+            } else {
+                console.log('📋 Existing session loaded:', sessionId);
+            }
+            
+            return sessionId;
         }
 
-        console.log('📋 Session ID:', sessionId);
+        // Get current session ID
+        let sessionId = getSessionId();
+
+        // Clear session when tab/window is closed
+        window.addEventListener('beforeunload', function() {
+            const currentSessionId = sessionStorage.getItem('chat_session_id');
+            if (currentSessionId) {
+                // Send clear request to backend
+                fetch(`${API_URL}/clear-session`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({session_id: currentSessionId}),
+                    keepalive: true  // Ensures request completes even as page closes
+                }).catch(err => console.log('Session cleanup attempted'));
+            }
+        });
 
         // Dark mode
         function toggleDarkMode() {
@@ -644,14 +667,27 @@
             toggleDarkMode();
         }
 
-        // Clear chat
-        function clearChat() {
+        // Clear chat and start new session
+        async function clearChat() {
+            // Clear session on backend
+            try {
+                await fetch(`${API_URL}/new-session`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({session_id: sessionId})
+                });
+            } catch (error) {
+                console.log('Clear session request sent');
+            }
+
+            // Clear UI
             chatMessages.innerHTML = '';
             welcomeScreen.style.display = 'block';
             chatMessages.appendChild(welcomeScreen);
-            // Generate new session for new chat
-            sessionId = crypto.randomUUID();
-            localStorage.setItem("session_id", sessionId);
+            
+            // Generate new session ID for this tab
+            sessionId = 'session_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+            sessionStorage.setItem('chat_session_id', sessionId);
             console.log('🔄 New session started:', sessionId);
         }
 
@@ -676,7 +712,7 @@
             const formattedContent = content.replace(/\n/g, '<br>');
             contentDiv.innerHTML = formattedContent;
             
-            // Add sources if available
+            // Add sources if available (but our backend now returns empty sources)
             if (!isUser && sources.length > 0) {
                 const sourcesDiv = document.createElement('div');
                 sourcesDiv.className = 'message-sources';
@@ -712,7 +748,7 @@
                     },
                     body: JSON.stringify({ 
                         message: message,
-                        session_id: sessionId  // ✅ CONTEXT ENABLED
+                        session_id: sessionId  // ✅ UNIQUE SESSION PER TAB
                     })
                 });
 
@@ -774,6 +810,7 @@
                 const response = await fetch(`${API_URL}/health`);
                 if (response.ok) {
                     console.log('✅ Backend connected successfully');
+                    console.log('📋 Current session ID:', sessionId);
                 } else {
                     console.warn('⚠️ Backend returned error');
                 }
